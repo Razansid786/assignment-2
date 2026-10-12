@@ -18,10 +18,12 @@ function EventDetail() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState('');
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
-  const isRegistered = registrations.some(
+  const myRegistration = registrations.find(
     (r) => r.userEmail === user?.email && r.event.id === id
   );
+  const isRegistered = Boolean(myRegistration);
 
   useEffect(() => {
     fetchEvent();
@@ -48,11 +50,22 @@ function EventDetail() {
     }
     dispatch(registerForEvent({ userEmail: user.email, event: selectedEvent }));
     setMessage('Successfully registered for this event!');
+    setConfirmCancel(false);
   }
 
-  function handleCancel() {
+  function handleCancelConfirm() {
+    setConfirmCancel(true);
+    setMessage('');
+  }
+
+  function handleCancelConfirmed() {
     dispatch(cancelRegistration({ userEmail: user.email, eventId: id }));
     setMessage('Registration cancelled.');
+    setConfirmCancel(false);
+  }
+
+  function handleCancelAbort() {
+    setConfirmCancel(false);
   }
 
   if (loading) return <p className="loading-msg">Loading event...</p>;
@@ -70,6 +83,14 @@ function EventDetail() {
   const priceMax = event.priceRanges?.[0]?.max;
   const currency = event.priceRanges?.[0]?.currency || 'USD';
   const ticketUrl = event.url;
+
+  const registeredDate = myRegistration
+    ? new Date(myRegistration.registeredAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : null;
 
   return (
     <div className="event-detail-page">
@@ -123,11 +144,28 @@ function EventDetail() {
               {isLoggedIn ? 'Register for Event' : 'Login to Register'}
             </button>
           ) : (
-            <>
-              <span className="registered-badge">Registered</span>
-              <button onClick={handleCancel} className="btn-cancel">Cancel Registration</button>
-            </>
+            <div className="registration-status">
+              <div className="registered-info">
+                <span className="registered-badge">Registered</span>
+                {registeredDate && (
+                  <span className="registered-on">Registered on {registeredDate}</span>
+                )}
+              </div>
+
+              {!confirmCancel ? (
+                <button onClick={handleCancelConfirm} className="btn-cancel">
+                  Cancel Registration
+                </button>
+              ) : (
+                <div className="cancel-confirm">
+                  <p>Are you sure you want to cancel?</p>
+                  <button onClick={handleCancelConfirmed} className="btn-cancel">Yes, Cancel</button>
+                  <button onClick={handleCancelAbort} className="btn-keep">Keep Registration</button>
+                </div>
+              )}
+            </div>
           )}
+
           {ticketUrl && (
             <a href={ticketUrl} target="_blank" rel="noreferrer" className="btn-ticket">
               Buy Tickets
